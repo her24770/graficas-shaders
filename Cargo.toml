@@ -1,0 +1,15 @@
+[package]
+name = "graficas-shaders"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+minifb = "0.28"
+# Solo para guardar las capturas del README (no se usa para texturas).
+png = "0.18"
+
+[profile.dev]
+opt-level = 2
+
+[profile.release]
+opt-level = 3
