@@ -134,12 +134,12 @@ fn capturas(dir: &str) {
     for view in VIEWS {
         let t = match view {
             View::Sistema => 6.0,
-            View::Gaia => 4.8,
+            View::Terranova => 4.8,
             _ => 4.0,
         };
         let mut cam = OrbitCamera::for_view(view);
-        if view == View::Cronos {
-            cam.yaw = 0.25;
+        if view == View::Ambar {
+            cam.yaw = -0.25;
         }
         renderer.render(view, t, &cam, &mut big);
         let mut data = Vec::with_capacity(w * h * 3);

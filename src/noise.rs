@@ -1,4 +1,4 @@
-//! Ruido procedural propio: valor 3D, fBm, ruido "ridged" y celular (Voronoi).
+//! Ruido procedural propio: valor 3D, fBm y celular (Voronoi).
 //! Todos los shaders se construyen con estas piezas; no hay texturas.
 use crate::math::Vec3;
 
@@ -45,19 +45,6 @@ pub fn fbm(p: Vec3, octaves: u32) -> f32 {
         q = Vec3::new(q.y * 1.6 + q.z * 1.2, q.z * 1.6 - q.x * 1.2, q.x * 1.6 + q.y * 1.2) + Vec3::new(17.1, 3.7, 9.2);
     }
     ((sum / norm - 0.5) * 1.7 + 0.5).clamp(0.0, 1.0)
-}
-
-/// Ruido "ridged": crestas finas donde el ruido cruza 0.5. Sirve para grietas, cordilleras y filamentos.
-pub fn ridged(p: Vec3, octaves: u32) -> f32 {
-    let (mut sum, mut amp, mut norm, mut q) = (0.0, 0.5, 0.0, p);
-    for _ in 0..octaves {
-        let r = 1.0 - (value_noise(q) * 2.0 - 1.0).abs();
-        sum += amp * r * r;
-        norm += amp;
-        amp *= 0.5;
-        q = q * 2.1 + Vec3::new(5.3, 1.9, 7.7);
-    }
-    sum / norm
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -110,7 +97,6 @@ mod tests {
             let p = Vec3::new(i as f32 * 0.37, i as f32 * 0.11, i as f32 * 0.73);
             assert_eq!(fbm(p, 4), fbm(p, 4));
             assert!((0.0..=1.0).contains(&fbm(p, 5)));
-            assert!((0.0..=1.0).contains(&ridged(p, 4)));
         }
     }
 

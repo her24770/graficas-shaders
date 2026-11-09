@@ -4,16 +4,16 @@
 //!
 //! Cada shader está hecho por **capas** que se van sumando o mezclando sobre el color;
 //! en cada archivo están numeradas (`// Capa N`).
-use crate::math::{v3, Mat4, Vec3};
+use crate::math::{v3, Vec3};
 
 mod anillos;
-mod boreas;
-mod cronos;
-mod gaia;
-mod helios;
-mod selene;
-mod thalassa;
-mod vulcano;
+mod glaciar;
+mod ambar;
+mod terranova;
+mod ignis;
+mod nacar;
+mod coral;
+mod magma;
 
 pub use anillos::ring_density;
 
@@ -46,21 +46,19 @@ pub struct Ring {
 pub struct Body {
     pub center: Vec3,
     pub radius: f32,
-    /// Rotación del modelo (local -> mundo), para el relieve (bump mapping).
-    pub rotation: Mat4,
     pub ring: Option<Ring>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Shader {
-    Helios,
-    Gaia,
-    Cronos,
+    Ignis,
+    Terranova,
+    Ambar,
     Anillos,
-    Selene,
-    Vulcano,
-    Thalassa,
-    Boreas,
+    Nacar,
+    Magma,
+    Coral,
+    Glaciar,
 }
 
 /// Todo lo que suelen necesitar los shaders, ya calculado.
@@ -87,33 +85,9 @@ impl Ctx {
         ((self.ndl + wrap) / (1.0 + wrap)).max(0.0)
     }
 
-    /// Diffusa usando otra normal (relieve).
-    pub fn diffuse_n(&self, n: Vec3, wrap: f32) -> f32 {
-        ((n.dot(self.l) + wrap) / (1.0 + wrap)).max(0.0)
-    }
-
-    /// Brillo especular Blinn-Phong.
-    pub fn specular(&self, n: Vec3, power: f32) -> f32 {
-        let h = (self.l + self.v).normalize();
-        n.dot(h).max(0.0).powf(power) * (self.ndl > 0.0) as u8 as f32
-    }
-
     /// Fresnel: 0 al centro del disco, 1 en el borde.
     pub fn fresnel(&self, power: f32) -> f32 {
         (1.0 - self.n.dot(self.v).max(0.0)).powf(power)
-    }
-
-    /// Normal perturbada por un campo de alturas `h(dir)` (bump mapping por diferencias finitas).
-    pub fn bump(&self, eps: f32, strength: f32, h: impl Fn(Vec3) -> f32) -> Vec3 {
-        let p = self.p;
-        let up = if p.y.abs() < 0.99 { Vec3::Y } else { v3(1.0, 0.0, 0.0) };
-        let t1 = p.cross(up).normalize();
-        let t2 = p.cross(t1);
-        let h0 = h(p);
-        let d1 = (h((p + t1 * eps).normalize()) - h0) / eps;
-        let d2 = (h((p + t2 * eps).normalize()) - h0) / eps;
-        let nl = (p - (t1 * d1 + t2 * d2) * strength).normalize();
-        self.body.rotation.transform_dir(nl).normalize()
     }
 
     /// Sombra que proyectan los anillos del planeta sobre su superficie (1 = sin sombra).
@@ -149,14 +123,14 @@ pub fn shade(s: Shader, f: &Fragment, body: &Body, u: &Uniforms) -> (Vec3, f32) 
         light_pos: u.light_pos,
     };
     match s {
-        Shader::Helios => (helios::shade(&ctx), 1.0),
-        Shader::Gaia => (gaia::shade(&ctx), 1.0),
-        Shader::Cronos => (cronos::shade(&ctx), 1.0),
+        Shader::Ignis => (ignis::shade(&ctx), 1.0),
+        Shader::Terranova => (terranova::shade(&ctx), 1.0),
+        Shader::Ambar => (ambar::shade(&ctx), 1.0),
         Shader::Anillos => anillos::shade(&ctx, f.local),
-        Shader::Selene => (selene::shade(&ctx), 1.0),
-        Shader::Vulcano => (vulcano::shade(&ctx), 1.0),
-        Shader::Thalassa => (thalassa::shade(&ctx), 1.0),
-        Shader::Boreas => (boreas::shade(&ctx), 1.0),
+        Shader::Nacar => (nacar::shade(&ctx), 1.0),
+        Shader::Magma => (magma::shade(&ctx), 1.0),
+        Shader::Coral => (coral::shade(&ctx), 1.0),
+        Shader::Glaciar => (glaciar::shade(&ctx), 1.0),
     }
 }
 
@@ -201,12 +175,6 @@ pub fn rot_y(p: Vec3, a: f32) -> Vec3 {
     v3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z)
 }
 
-/// Gira `p` alrededor de un eje unitario (fórmula de Rodrigues).
-pub fn rot_axis(p: Vec3, axis: Vec3, a: f32) -> Vec3 {
-    let (s, c) = a.sin_cos();
-    p * c + axis.cross(p) * s + axis * (axis.dot(p) * (1.0 - c))
-}
-
 /// Coordenadas 2D alrededor de un punto `c` de la esfera: (distancia, ángulo).
 /// Sirve para dibujar tormentas y espirales centradas en un lugar del planeta.
 pub fn polar_around(p: Vec3, c: Vec3) -> (f32, f32) {
@@ -223,7 +191,7 @@ mod tests {
     use super::*;
 
     fn cuerpo() -> Body {
-        Body { center: Vec3::ZERO, radius: 1.0, rotation: Mat4::IDENTITY, ring: None }
+        Body { center: Vec3::ZERO, radius: 1.0, ring: None }
     }
 
     fn color(s: Shader, local: Vec3, t: f32, luz: Vec3) -> u32 {
@@ -232,7 +200,7 @@ mod tests {
         pack(shade(s, &f, &cuerpo(), &u).0)
     }
 
-    const TODOS: [Shader; 7] = [Shader::Helios, Shader::Gaia, Shader::Cronos, Shader::Selene, Shader::Vulcano, Shader::Thalassa, Shader::Boreas];
+    const TODOS: [Shader; 7] = [Shader::Ignis, Shader::Terranova, Shader::Ambar, Shader::Nacar, Shader::Magma, Shader::Coral, Shader::Glaciar];
 
     #[test]
     fn cada_shader_tiene_variedad_de_colores() {
@@ -250,12 +218,12 @@ mod tests {
     #[test]
     fn el_sol_se_anima_con_el_tiempo() {
         let p = v3(0.3, 0.5, 0.8).normalize();
-        assert_ne!(color(Shader::Helios, p, 0.0, Vec3::Y), color(Shader::Helios, p, 5.0, Vec3::Y));
+        assert_ne!(color(Shader::Ignis, p, 0.0, Vec3::Y), color(Shader::Ignis, p, 5.0, Vec3::Y));
     }
 
     #[test]
     fn el_lado_de_noche_es_mas_oscuro() {
-        for s in [Shader::Cronos, Shader::Selene, Shader::Boreas] {
+        for s in [Shader::Ambar, Shader::Nacar, Shader::Glaciar] {
             let p = v3(0.2, 0.1, 1.0).normalize();
             let brillo = |c: u32| (c >> 16 & 0xFF) + (c >> 8 & 0xFF) + (c & 0xFF);
             let dia = brillo(color(s, p, 0.0, v3(0.0, 0.0, 1.0)));
@@ -266,8 +234,8 @@ mod tests {
 
     #[test]
     fn los_anillos_tienen_huecos() {
-        assert!(ring_density(1.97) < 0.15, "división de Cassini");
-        assert!(ring_density(1.8) > 0.4);
+        assert!(ring_density(1.89) < 0.15, "división de Cassini");
+        assert!(ring_density(1.7) > 0.4);
         assert_eq!(ring_density(0.5), 0.0);
     }
 
